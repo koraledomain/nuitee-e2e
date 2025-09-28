@@ -1,4 +1,9 @@
-import 'dotenv/config';
+// Load .env file only if it exists (for local development)
+try {
+  require('dotenv/config');
+} catch (e) {
+  // dotenv not available or .env doesn't exist - that's fine for CI
+}
 
 function required(name: string): string {
   const v = process.env[name];
