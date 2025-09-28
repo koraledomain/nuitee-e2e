@@ -25,10 +25,9 @@ A comprehensive API testing framework for LiteAPI Travel services, built with Pa
 
 3. **Run tests:**
    ```bash
-   npm test                    # All tests
-   npm run test:journeys      # Journey tests only
-   npm run test:hotels        # Hotel tests only
-   npm run test:bookings      # Booking tests only
+   npm test                    # All API tests
+   npm run test:minimal       # Minimal E2E tests
+   npm run test:api           # API tests only
    ```
 
 ## 📁 Project Structure
@@ -38,57 +37,64 @@ liteapi-api-tests/
 ├── package.json                 # Dependencies and scripts
 ├── tsconfig.json               # TypeScript configuration
 ├── jest.config.ts              # Jest configuration
+├── playwright.config.ts        # Playwright configuration
 ├── .env.example                # Environment variables template
 ├── .gitignore                  # Git ignore rules
 ├── README.md                   # This file
 ├── schemas/
 │   └── openapi.json           # OpenAPI 3.0 schema definitions
+├── mcp-server/                 # MCP Server for selector management
+│   ├── package.json
+│   └── server.js
 ├── src/
-│   ├── config/
-│   │   └── env.ts             # Environment configuration
-│   ├── helpers/
-│   │   ├── client.ts          # PactumJS client setup
-│   │   ├── openapi.ts         # OpenAPI schema utilities
-│   │   ├── contract.ts        # Response validation
-│   │   ├── dataFactory.ts     # Test data generation
-│   │   ├── registry.ts        # Resource tracking
-│   │   └── selectors.ts       # Response data selectors
-│   └── suites/
-│       ├── journeys/          # End-to-end user journeys
-│       │   ├── rome_happy_path.spec.ts
-│       │   ├── rome_nrfn_cancel.spec.ts
-│       │   └── rome_multi_occupancy_altpay.spec.ts
-│       ├── hotels/            # Hotel-specific tests
-│       │   └── rates_negative.spec.ts
-│       └── bookings/          # Booking-specific tests
-│           └── cancel_negative.spec.ts
+│   ├── api/                    # API Testing (PactumJS + Jest)
+│   │   ├── config/
+│   │   │   └── env.ts         # Environment configuration
+│   │   ├── helpers/
+│   │   │   ├── client.ts      # PactumJS client setup
+│   │   │   ├── openapi.ts     # OpenAPI schema utilities
+│   │   │   ├── contract.ts    # Response validation
+│   │   │   ├── dataFactory.ts # Test data generation
+│   │   │   ├── registry.ts    # Resource tracking
+│   │   │   └── selectors.ts   # Response data selectors
+│   │   └── suites/
+│   │       ├── journeys/      # End-to-end user journeys
+│   │       │   └── rome_happy_path.spec.ts
+│   │       ├── hotels/        # Hotel-specific tests
+│   │       │   └── rates_negative.spec.ts
+│   │       └── bookings/      # Booking-specific tests
+│   │           └── cancel_negative.spec.ts
+│   └── e2e/                   # E2E Testing (Playwright)
+│       └── minimal.spec.ts    # Minimal UI tests
 └── .github/
     └── workflows/
-        └── api-tests.yml      # CI/CD pipeline
+        ├── api-tests.yml      # API tests CI/CD
+        ├── playwright-tests.yml # E2E tests CI/CD
+        └── schemathesis.yml   # OpenAPI contract testing
 ```
 
 ## 🧪 Test Suites
 
-### Journey Tests (`src/suites/journeys/`)
-Complete end-to-end user workflows:
+### API Tests (`src/api/suites/`)
+Complete API testing with PactumJS:
 
-- **`rome_happy_path.spec.ts`** - Full booking flow: Search → Rates → Prebook → Book → Cancel
-- **`rome_nrfn_cancel.spec.ts`** - Non-refundable booking cancellation flow
-- **`rome_multi_occupancy_altpay.spec.ts`** - Multi-occupancy with alternative payment methods
+- **`journeys/rome_happy_path.spec.ts`** - Full booking flow: Search → Rates → Prebook → Book → Cancel
+- **`hotels/rates_negative.spec.ts`** - Invalid date ranges, missing API keys
+- **`bookings/cancel_negative.spec.ts`** - Invalid booking cancellation attempts
 
-### Negative Tests
-- **`rates_negative.spec.ts`** - Invalid date ranges, missing API keys
-- **`cancel_negative.spec.ts`** - Invalid booking cancellation attempts
+### E2E Tests (`src/e2e/`)
+Minimal UI testing with Playwright:
+
+- **`minimal.spec.ts`** - Basic website loading and interaction validation
 
 ## 🔧 Available Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm test` | Run all test suites |
-| `npm run test:ci` | Run tests with CI reporting (JUnit XML) |
-| `npm run test:journeys` | Run only journey tests |
-| `npm run test:hotels` | Run only hotel tests |
-| `npm run test:bookings` | Run only booking tests |
+| `npm test` | Run all API test suites |
+| `npm run test:ci` | Run API tests with CI reporting (JUnit XML) |
+| `npm run test:minimal` | Run minimal E2E tests |
+| `npm run test:api` | Run API tests only |
 | `npm run report` | Display test reporting information |
 
 ## 🏗️ Architecture Features
@@ -107,6 +113,11 @@ Complete end-to-end user workflows:
 - Automatic tracking of created resources (bookings)
 - Cleanup after test completion
 - Prevents test data pollution
+
+### MCP Server Integration
+- Centralized selector management for E2E tests
+- Real-time selector updates
+- Contract-based element selection
 
 ### Parallel Execution
 - Optimized for CI/CD with sharding support
@@ -128,6 +139,12 @@ RUN_ID=LOCAL                               # Test run identifier
 - **Workers**: 50% in CI, 100% locally
 - **Reporters**: Default + JUnit XML for CI
 
+### Playwright Configuration
+- **Test Environment**: Node.js
+- **Browsers**: Chrome, Firefox, Safari
+- **Screenshots**: On failure
+- **Videos**: On failure
+
 ### TypeScript Configuration
 - **Target**: ES2021
 - **Module**: ES2022
@@ -136,24 +153,53 @@ RUN_ID=LOCAL                               # Test run identifier
 
 ## 🚀 CI/CD Pipeline
 
-The project includes a GitHub Actions workflow (`.github/workflows/api-tests.yml`) that:
+The project includes multiple GitHub Actions workflows:
 
+### API Tests (`.github/workflows/api-tests.yml`)
 - Runs on push and pull requests
 - Uses 4-shard parallel execution
 - Generates JUnit XML reports
 - Uploads test artifacts
-- Supports matrix testing for scalability
+
+### E2E Tests (`.github/workflows/playwright-tests.yml`)
+- Manual dispatch trigger
+- Optional headed mode
+- Minimal test execution
+- Artifact upload
+
+### Contract Testing (`.github/workflows/schemathesis.yml`)
+- OpenAPI contract validation
+- Nightly execution
+- Schema compliance checking
 
 ## 🛠️ Development
 
-### Adding New Tests
-1. Create test files in appropriate suite directory
-2. Use helper functions from `src/helpers/`
+### Adding New API Tests
+1. Create test files in appropriate suite directory (`src/api/suites/`)
+2. Use helper functions from `src/api/helpers/`
 3. Follow naming convention: `*.spec.ts`
 4. Include proper test descriptions and tags
 
+### Adding E2E Tests
+1. Create test files in `src/e2e/`
+2. Use Playwright's built-in selectors
+3. Follow naming convention: `*.spec.ts`
+4. Include proper test descriptions
+
+### MCP Server Usage
+```bash
+cd mcp-server
+npm install
+npm start
+```
+
+**Available tools:**
+- `get_selector` - Get CSS selector for UI element
+- `list_selectors` - List all available selectors  
+- `update_selector` - Update a selector
+
 ### Extending Data Factory
-Add new methods to `src/helpers/dataFactory.ts`:
+Add new methods to `src/api/helpers/dataFactory.ts`:
 ```typescript
 export const DF = {
   // ... existing methods
@@ -165,17 +211,49 @@ export const DF = {
 
 ### Adding OpenAPI Endpoints
 1. Update `schemas/openapi.json` with new endpoint definitions
-2. Add validation in `src/helpers/contract.ts` if needed
+2. Add validation in `src/api/helpers/contract.ts` if needed
 3. Create corresponding test cases
 
 ## 📊 Test Coverage
 
 The framework covers:
-- ✅ **Happy Path Flows** - Complete user journeys
-- ✅ **Negative Testing** - Error conditions and edge cases
+- ✅ **API Happy Path Flows** - Complete user journeys
+- ✅ **API Negative Testing** - Error conditions and edge cases
 - ✅ **Contract Validation** - OpenAPI schema compliance
 - ✅ **Resource Cleanup** - Proper test isolation
+- ✅ **E2E Basic Validation** - UI interaction testing
 - ✅ **Parallel Execution** - Scalable test runs
+
+## 🎯 Enhancement Capabilities
+
+This project demonstrates several advanced testing patterns that can be extended:
+
+### 1. Advanced Test Organization
+- Project-based test execution with annotations
+- Run specific test categories (journey, smoke, ui, api, mobile)
+- Browser-specific test execution
+
+### 2. User Journey Testing
+- Complete end-to-end user workflows
+- Authentication flow testing
+- Search and selection workflows
+- Multi-browser parallel execution
+
+### 3. API + E2E Integration
+- Combined API and UI testing
+- Authentication via API + UI validation
+- Endpoint accessibility testing
+
+### 4. Selector Contract Management
+- Centralized selector management
+- Page Object pattern
+- Type-safe selector access
+- Contract validation tests
+
+### 5. Advanced Test Discovery
+- Dynamic element discovery
+- Screenshot-based validation
+- Real-time selector updates
 
 ## 🤝 Contributing
 

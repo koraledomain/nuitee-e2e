@@ -35,6 +35,7 @@ describe('[@journey][@hotels][@rates][@booking] Rome happy path', () => {
     validateResponse('/hotels/rates', 'post', '200', rates);
 
     const sel = pickFirstOffer(rates);
+ 
 
     // 3) prebook
     const pre = await spec()
