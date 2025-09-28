@@ -14,69 +14,52 @@ const selectors = {
 };
 
 test.describe('@journey User Journey - Search to Booking', () => {
-  test('Basic website interaction and element discovery', async ({ page }) => {
+  test('Complete user journey: Accept cookies → Search → Select hotel', async ({ page }) => {
     // Step 1: Navigate to the website
     await page.goto('https://v3.nuitee.link');
-    
-    // Wait for page to load
     await page.waitForLoadState('networkidle');
-    const title = await page.title();
-    console.log('Page title:', title);
+    console.log('✅ Website loaded');
 
-    // Step 2: Take a screenshot to see what's on the page
-    await page.screenshot({ path: 'reports/website-loaded.png' });
-    console.log('✅ Website loaded, screenshot taken');
-
-    // Step 3: Look for any input fields
-    const inputs = page.locator('input');
-    const inputCount = await inputs.count();
-    console.log(`Found ${inputCount} input fields`);
-
-    // Step 4: Look for any buttons
-    const buttons = page.locator('button');
-    const buttonCount = await buttons.count();
-    console.log(`Found ${buttonCount} buttons`);
-
-    // Step 5: Look for any forms
-    const forms = page.locator('form');
-    const formCount = await forms.count();
-    console.log(`Found ${formCount} forms`);
-
-    // Step 6: Try to find search-related elements
-    const searchInputs = page.locator('input[type="text"], input[placeholder*="search"], input[placeholder*="location"]');
-    const searchCount = await searchInputs.count();
-    console.log(`Found ${searchCount} search-related inputs`);
-
-    if (searchCount > 0) {
-      console.log('✅ Found search inputs, trying to interact');
-      try {
-        await searchInputs.first().fill('Rome, Italy');
-        console.log('✅ Successfully filled search input');
-      } catch (error) {
-        console.log('⚠️ Could not fill search input:', error instanceof Error ? error.message : String(error));
+    // Step 2: Accept cookies if present
+    try {
+      const cookieButton = page.locator('button:has-text("Accept"), button:has-text("OK"), button:has-text("I agree"), [data-testid*="cookie"]');
+      if (await cookieButton.count() > 0) {
+        await cookieButton.first().click();
+        console.log('✅ Accepted cookies');
       }
+    } catch (error) {
+      console.log('ℹ️ No cookie banner found');
     }
 
-    // Step 7: Look for any clickable elements
-    const clickables = page.locator('button, a, [role="button"]');
-    const clickableCount = await clickables.count();
-    console.log(`Found ${clickableCount} clickable elements`);
+    // Step 3: Search for a destination
+    const searchInput = page.locator('input[type="text"], input[placeholder*="search"], input[placeholder*="where"]').first();
+    await searchInput.fill('Rome, Italy');
+    console.log('✅ Filled search input with "Rome, Italy"');
 
-    if (clickableCount > 0) {
-      console.log('✅ Found clickable elements');
-      // Just log the first few for debugging
-      for (let i = 0; i < Math.min(3, clickableCount); i++) {
-        const text = await clickables.nth(i).textContent();
-        console.log(`  - Clickable ${i + 1}: "${text}"`);
-      }
+    // Step 4: Click search button
+    const searchButton = page.locator('button[type="submit"], button:has-text("Search"), button:has-text("Find")').first();
+    await searchButton.click();
+    console.log('✅ Clicked search button');
+
+    // Step 5: Wait for results and select first hotel
+    await page.waitForTimeout(3000);
+    
+    const hotels = page.locator('[data-testid*="hotel"], .hotel, [class*="hotel"], [class*="property"]');
+    const hotelCount = await hotels.count();
+    console.log(`Found ${hotelCount} hotels`);
+
+    if (hotelCount > 0) {
+      await hotels.first().click();
+      console.log('✅ Selected first hotel');
+    } else {
+      console.log('⚠️ No hotels found');
     }
 
-    // Step 8: Final screenshot
+    // Step 6: Take final screenshot
     await page.screenshot({ path: 'reports/user-journey-completed.png' });
     console.log('✅ User journey completed successfully');
     
-    // Basic assertions to make the test pass
-    expect(inputCount).toBeGreaterThanOrEqual(0);
-    expect(buttonCount).toBeGreaterThanOrEqual(0);
+    // Assertions
+    expect(hotelCount).toBeGreaterThan(0);
   });
 });
