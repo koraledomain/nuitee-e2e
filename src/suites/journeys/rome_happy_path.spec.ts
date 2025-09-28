@@ -10,13 +10,14 @@ async function cancelBooking(id: string) {
   validateResponse('/bookings/{bookingId}', 'put', '200', res);
 }
 
-describe.only('[@journey][@hotels][@rates][@booking] Rome happy path', () => {
+describe('[@journey][@hotels][@rates][@booking] Rome happy path', () => {
   afterAll(async () => { await cleanupAll(cancelBooking); });
 
   test('search → rates → prebook → book → cancel  @smoke', async () => {
     // 1) search hotels Rome/IT
     const hotels = await spec()
       .get('/data/hotels')
+      .withRequestTimeout(15_000)  
       .withQueryParams({ countryCode: 'IT', cityName: 'Rome' })
       .expectStatus(200)
       .returns('res.body');

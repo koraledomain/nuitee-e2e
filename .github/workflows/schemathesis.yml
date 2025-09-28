@@ -1,0 +1,82 @@
+name: Schemathesis (OpenAPI fuzz & contract)
+
+on:
+  # Run on schema changes + manual + nightly
+  pull_request:
+    paths:
+      - "schemas/**"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Data generation mode"
+        required: false
+        default: "all"           # all | positive | negative
+      workers:
+        description: "Concurrent workers (1-64 or auto)"
+        required: false
+        default: "8"
+      include_paths:
+        description: "Space-separated paths to include (e.g. /hotels/rates /rates/prebook)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 2 * * *"         # nightly
+
+jobs:
+  schemathesis:
+    runs-on: ubuntu-latest
+    env:
+      # 🔧 Set your base URL here (or pass via env/secret if it varies by env)
+      BASE_URL: https://book.liteapi.travel/v3.0
+      # 🔐 Add this secret in repo settings → Secrets and variables → Actions
+      LITEAPI_KEY: ${{ secrets.LITEAPI_KEY }}
+      # Inputs with fallbacks
+      MODE: ${{ inputs.mode || 'all' }}
+      WORKERS: ${{ inputs.workers || '8' }}
+      INCLUDE_PATHS: ${{ inputs.include_paths || '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare report directory
+        run: mkdir -p reports
+
+      - name: Build include flags
+        id: flags
+        shell: bash
+        run: |
+          EXTRAS=""
+          if [ -n "${INCLUDE_PATHS}" ]; then
+            for p in ${INCLUDE_PATHS}; do
+              EXTRAS+=" --include-path ${p} "
+            done
+          fi
+          echo "extras=${EXTRAS}" >> "$GITHUB_OUTPUT"
+
+      - name: Run Schemathesis (Docker)
+        shell: bash
+        run: |
+          set -e
+          echo "Running mode=${MODE}, workers=${WORKERS}"
+          docker run --rm -t \
+            -e BASE_URL="${BASE_URL}" \
+            -e LITEAPI_KEY="${LITEAPI_KEY}" \
+            -v "$PWD/schemas:/schemas:ro" \
+            -v "$PWD/reports:/out" \
+            schemathesis/schemathesis:latest \
+              run /schemas/openapi.json \
+              --url "${BASE_URL}" \
+              --header "X-Api-Key: ${LITEAPI_KEY}" \
+              --checks all \
+              --workers "${WORKERS}" \
+              --mode "${MODE}" \
+              --report junit \
+              --report-junit-path /out/schemathesis.xml \
+              ${{ steps.flags.outputs.extras }}
+
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: schemathesis-junit
+          path: reports/schemathesis.xml
