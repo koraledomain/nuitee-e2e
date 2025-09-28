@@ -17,6 +17,7 @@ describe.only('[@journey][@hotels][@rates][@booking] Rome happy path', () => {
     // 1) search hotels Rome/IT
     const hotels = await spec()
       .get('/data/hotels')
+      .withRequestTimeout(15_000)  
       .withQueryParams({ countryCode: 'IT', cityName: 'Rome' })
       .expectStatus(200)
       .returns('res.body');

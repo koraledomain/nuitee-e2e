@@ -8,7 +8,7 @@ request.setDefaultHeaders({
 });
 
 // Set default timeout to 30 seconds for API calls
-request.setDefaultTimeout(3000);
+request.setDefaultTimeout(30_000);
 
 // // gentle retries to reduce flakes on 429/5xx
 // request.setDefaultRetryCount(2);
