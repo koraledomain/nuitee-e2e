@@ -1,5 +1,7 @@
-import { ENV } from '../config/env';
-import { getRequestSchema } from './openapi';
+// Simple environment setup
+const ENV = {
+  RUN_ID: process.env.RUN_ID || `RUN-${Date.now()}-${Math.random().toString(36).slice(2,8)}`
+};
 
 type Dict = Record<string, any>;
 
@@ -46,10 +48,8 @@ export const DF = {
       roomMapping: true
     };
 
-    // Example: if schema has enum for currency, pick first
-    const schema = getRequestSchema('/hotels/rates', 'post');
-    const currencyEnum = schema?.properties?.currency?.enum;
-    if (currencyEnum) base.currency = pick(currencyEnum, base.currency);
+    // Simple currency selection (removed OpenAPI dependency)
+    // base.currency is already set to 'USD'
 
     return { ...base, ...overrides };
   },
