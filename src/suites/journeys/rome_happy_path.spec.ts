@@ -10,7 +10,7 @@ async function cancelBooking(id: string) {
   validateResponse('/bookings/{bookingId}', 'put', '200', res);
 }
 
-describe.only('[@journey][@hotels][@rates][@booking] Rome happy path', () => {
+describe('[@journey][@hotels][@rates][@booking] Rome happy path', () => {
   afterAll(async () => { await cleanupAll(cancelBooking); });
 
   test('search → rates → prebook → book → cancel  @smoke', async () => {
