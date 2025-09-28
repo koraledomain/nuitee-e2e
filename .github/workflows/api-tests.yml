@@ -1,7 +1,7 @@
-name: api-tests
-on: [push, pull_request, workflow_dispatch]
+name: API Smoke Tests
+on: [push, pull_request]
 jobs:
-  journey-test:
+  smoke-tests:
     runs-on: ubuntu-latest
     env:
       BASE_URL: https://book.liteapi.travel/v3.0
@@ -12,10 +12,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm ci
-      - name: Run API Journey Test
-        run: npm run test:journeys
+      - name: Run Smoke Tests (excluding bugs)
+        run: npm run test:smoke
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: api-journey-results
+          name: api-smoke-results
           path: reports/

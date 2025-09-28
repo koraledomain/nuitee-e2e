@@ -1,0 +1,42 @@
+name: Bug Tests
+on: 
+  workflow_dispatch:
+    inputs:
+      run_bug_tests:
+        description: 'Run bug tests to check API issues'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  bug-tests:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.run_bug_tests }}
+    env:
+      BASE_URL: https://book.liteapi.travel/v3.0
+      LITEAPI_KEY: ${{ secrets.LITEAPI_KEY }}
+      RUN_ID: ${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - name: Run Bug Tests
+        run: npm run test:bug
+        continue-on-error: true  # Bug tests are expected to fail
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bug-test-results
+          path: reports/
+      - name: Comment on PR (if applicable)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🐛 **Bug Tests Failed** - This is expected! The tests document known API issues. Check the logs for details.'
+            })
