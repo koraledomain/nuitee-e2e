@@ -19,8 +19,8 @@ on:
         description: "Space-separated paths to include (e.g. /hotels/rates /rates/prebook)"
         required: false
         default: ""
-  schedule:
-    - cron: "0 2 * * *"         # nightly
+  # schedule:
+  #   - cron: "0 2 * * *"         # nightly
 
 jobs:
   schemathesis:
